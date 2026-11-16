@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,9 +31,12 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -54,17 +59,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.credentials.CredentialManager
-import com.example.auth.attemptAutoSignIn
-import com.example.auth.onGoogleSignInClicked
+import com.example.auth.isValidRegistrationUsername
+import com.example.auth.normalizeUsernameSlug
+import com.example.auth.registerWithUsernameAndPassword
+import com.example.auth.signInWithUsernameAndPassword
 import com.example.ui.components.RoyalBackground
 import com.example.ui.components.RoyalPanelCard
 import com.example.ui.components.YemeDrawerHeader
@@ -97,31 +105,37 @@ fun AuthSignInScreen(
   onAuthSuccess: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val context = LocalContext.current
   val scope = rememberCoroutineScope()
-  val credentialManager = remember(context) { CredentialManager.create(context) }
   val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
   val lang = LocalAppLang.current
 
   var activeTab by rememberSaveable { mutableStateOf(UnauthTab.LOGIN) }
+
+  var loginUsername by rememberSaveable { mutableStateOf("") }
+  var loginPassword by rememberSaveable { mutableStateOf("") }
+  var loginPasswordVisible by remember { mutableStateOf(false) }
+
   var regUsername by rememberSaveable { mutableStateOf("") }
   var regPhone by rememberSaveable { mutableStateOf("") }
+  var regPassword by rememberSaveable { mutableStateOf("") }
+  var regConfirmPassword by rememberSaveable { mutableStateOf("") }
+  var regPasswordVisible by remember { mutableStateOf(false) }
+  var regConfirmPasswordVisible by remember { mutableStateOf(false) }
+
   var isLoading by remember { mutableStateOf(false) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
   LaunchedEffect(Unit) {
-    attemptAutoSignIn(
-      context = context,
-      credentialManager = credentialManager,
-      onAuthSuccess = onAuthSuccess,
-      onUnauthenticated = {},
-      scope = scope,
-    )
     while (isActive) {
       nowMs = System.currentTimeMillis()
       delay(1000L)
     }
+  }
+
+  BackHandler(enabled = activeTab != UnauthTab.LOGIN) {
+    errorMessage = null
+    activeTab = UnauthTab.LOGIN
   }
 
   val cycle = BingoEngine.currentCycle(nowMs)
@@ -131,13 +145,63 @@ fun AuthSignInScreen(
     BingoEngine.formatMmSs(cycle.msUntilNextCycle)
   }
 
-  fun launchGoogleAuth(pendingName: String?, pendingPhone: String?) {
+  fun submitLogin() {
+    val cleanUser = loginUsername.trim()
+    when {
+      cleanUser.isEmpty() || loginPassword.isEmpty() -> {
+        errorMessage = "Enter your username and password."
+        return
+      }
+      '@' !in cleanUser && normalizeUsernameSlug(cleanUser).length < 2 -> {
+        errorMessage = "Enter a valid username."
+        return
+      }
+    }
     errorMessage = null
-    onPreparePendingProfile(pendingName, pendingPhone)
+    onPreparePendingProfile(null, null)
     isLoading = true
-    onGoogleSignInClicked(
-      context = context,
-      credentialManager = credentialManager,
+    signInWithUsernameAndPassword(
+      usernameOrEmail = cleanUser,
+      password = loginPassword,
+      onAuthSuccess = {
+        isLoading = false
+        onAuthSuccess()
+      },
+      onAuthError = { msg ->
+        isLoading = false
+        errorMessage = msg
+      },
+      scope = scope,
+    )
+  }
+
+  fun submitRegister() {
+    val cleanUser = regUsername.trim()
+    val cleanPhone = BingoEngine.cleanPhone(regPhone)
+    when {
+      !isValidRegistrationUsername(cleanUser) -> {
+        errorMessage = "Username must be 2 to 40 letters or numbers."
+        return
+      }
+      cleanPhone.isNotEmpty() && !Regex("^\\+?\\d{9,15}$").matches(cleanPhone) -> {
+        errorMessage = "Enter a valid phone number."
+        return
+      }
+      regPassword.length < 6 -> {
+        errorMessage = "Password must be at least 6 characters."
+        return
+      }
+      regPassword != regConfirmPassword -> {
+        errorMessage = "Passwords do not match."
+        return
+      }
+    }
+    errorMessage = null
+    onPreparePendingProfile(cleanUser, cleanPhone)
+    isLoading = true
+    registerWithUsernameAndPassword(
+      username = cleanUser,
+      password = regPassword,
       onAuthSuccess = {
         isLoading = false
         onAuthSuccess()
@@ -148,12 +212,19 @@ fun AuthSignInScreen(
         errorMessage = msg
       },
       scope = scope,
-      onAuthCancelled = {
-        isLoading = false
-        onPreparePendingProfile(null, null)
-      },
     )
   }
+
+  val fieldColors = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = GoldPrimary,
+    unfocusedBorderColor = VioletOutline,
+    focusedTextColor = InkLight,
+    unfocusedTextColor = InkLight,
+    focusedLabelColor = GoldBright,
+    unfocusedLabelColor = InkMuted,
+    focusedPlaceholderColor = InkMuted.copy(alpha = 0.7f),
+    unfocusedPlaceholderColor = InkMuted.copy(alpha = 0.7f),
+  )
 
   ModalNavigationDrawer(
     drawerState = drawerState,
@@ -347,11 +418,62 @@ fun AuthSignInScreen(
                   HorizontalDivider(color = GoldPrimary.copy(alpha = 0.28f))
                   Spacer(modifier = Modifier.height(16.dp))
 
-                  Text(
-                    text = AppStrings.loginSubtitle(lang),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = InkLight,
-                    textAlign = TextAlign.Center,
+                  OutlinedTextField(
+                    value = loginUsername,
+                    onValueChange = { loginUsername = it; errorMessage = null },
+                    label = { Text(AppStrings.labelUsername(lang)) },
+                    placeholder = { Text(AppStrings.hintUsername(lang)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                      keyboardType = KeyboardType.Text,
+                      imeAction = ImeAction.Next,
+                    ),
+                    colors = fieldColors,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .testTag("login_username_input"),
+                  )
+
+                  Spacer(modifier = Modifier.height(14.dp))
+
+                  OutlinedTextField(
+                    value = loginPassword,
+                    onValueChange = { loginPassword = it; errorMessage = null },
+                    label = { Text(AppStrings.labelPassword(lang)) },
+                    placeholder = { Text(AppStrings.hintPassword(lang)) },
+                    singleLine = true,
+                    visualTransformation = if (loginPasswordVisible) {
+                      VisualTransformation.None
+                    } else {
+                      PasswordVisualTransformation()
+                    },
+                    trailingIcon = {
+                      IconButton(
+                        onClick = { loginPasswordVisible = !loginPasswordVisible },
+                        modifier = Modifier.size(48.dp),
+                      ) {
+                        Icon(
+                          imageVector = if (loginPasswordVisible) {
+                            Icons.Rounded.VisibilityOff
+                          } else {
+                            Icons.Rounded.Visibility
+                          },
+                          contentDescription = if (loginPasswordVisible) "Hide password" else "Show password",
+                          tint = InkMuted,
+                        )
+                      }
+                    },
+                    keyboardOptions = KeyboardOptions(
+                      keyboardType = KeyboardType.Password,
+                      imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { submitLogin() }),
+                    colors = fieldColors,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .testTag("login_password_input"),
                   )
 
                   if (errorMessage != null) {
@@ -368,11 +490,11 @@ fun AuthSignInScreen(
                   Spacer(modifier = Modifier.height(20.dp))
 
                   YemeGradientButton(
-                    text = AppStrings.loginWithGoogle(lang),
+                    text = AppStrings.loginTitle(lang),
                     icon = Icons.AutoMirrored.Rounded.Login,
                     isLoading = isLoading,
-                    onClick = { launchGoogleAuth(null, null) },
-                    modifier = Modifier.testTag("google_sign_in_button"),
+                    onClick = { submitLogin() },
+                    modifier = Modifier.testTag("login_submit_button"),
                   )
                 }
               }
@@ -430,16 +552,11 @@ fun AuthSignInScreen(
                     label = { Text(AppStrings.labelUsername(lang)) },
                     placeholder = { Text(AppStrings.hintUsername(lang)) },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                      focusedBorderColor = GoldPrimary,
-                      unfocusedBorderColor = VioletOutline,
-                      focusedTextColor = InkLight,
-                      unfocusedTextColor = InkLight,
-                      focusedLabelColor = GoldBright,
-                      unfocusedLabelColor = InkMuted,
-                      focusedPlaceholderColor = InkMuted.copy(alpha = 0.7f),
-                      unfocusedPlaceholderColor = InkMuted.copy(alpha = 0.7f),
+                    keyboardOptions = KeyboardOptions(
+                      keyboardType = KeyboardType.Text,
+                      imeAction = ImeAction.Next,
                     ),
+                    colors = fieldColors,
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                       .fillMaxWidth()
@@ -454,21 +571,96 @@ fun AuthSignInScreen(
                     label = { Text(AppStrings.labelPhone(lang)) },
                     placeholder = { Text(AppStrings.hintPhone(lang)) },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    colors = OutlinedTextFieldDefaults.colors(
-                      focusedBorderColor = GoldPrimary,
-                      unfocusedBorderColor = VioletOutline,
-                      focusedTextColor = InkLight,
-                      unfocusedTextColor = InkLight,
-                      focusedLabelColor = GoldBright,
-                      unfocusedLabelColor = InkMuted,
-                      focusedPlaceholderColor = InkMuted.copy(alpha = 0.7f),
-                      unfocusedPlaceholderColor = InkMuted.copy(alpha = 0.7f),
+                    keyboardOptions = KeyboardOptions(
+                      keyboardType = KeyboardType.Phone,
+                      imeAction = ImeAction.Next,
                     ),
+                    colors = fieldColors,
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                       .fillMaxWidth()
                       .testTag("register_phone_input"),
+                  )
+
+                  Spacer(modifier = Modifier.height(14.dp))
+
+                  OutlinedTextField(
+                    value = regPassword,
+                    onValueChange = { regPassword = it; errorMessage = null },
+                    label = { Text(AppStrings.labelPassword(lang)) },
+                    placeholder = { Text(AppStrings.hintPassword(lang)) },
+                    singleLine = true,
+                    visualTransformation = if (regPasswordVisible) {
+                      VisualTransformation.None
+                    } else {
+                      PasswordVisualTransformation()
+                    },
+                    trailingIcon = {
+                      IconButton(
+                        onClick = { regPasswordVisible = !regPasswordVisible },
+                        modifier = Modifier.size(48.dp),
+                      ) {
+                        Icon(
+                          imageVector = if (regPasswordVisible) {
+                            Icons.Rounded.VisibilityOff
+                          } else {
+                            Icons.Rounded.Visibility
+                          },
+                          contentDescription = if (regPasswordVisible) "Hide password" else "Show password",
+                          tint = InkMuted,
+                        )
+                      }
+                    },
+                    keyboardOptions = KeyboardOptions(
+                      keyboardType = KeyboardType.Password,
+                      imeAction = ImeAction.Next,
+                    ),
+                    colors = fieldColors,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .testTag("register_password_input"),
+                  )
+
+                  Spacer(modifier = Modifier.height(14.dp))
+
+                  OutlinedTextField(
+                    value = regConfirmPassword,
+                    onValueChange = { regConfirmPassword = it; errorMessage = null },
+                    label = { Text(AppStrings.labelConfirmPassword(lang)) },
+                    placeholder = { Text(AppStrings.hintConfirmPassword(lang)) },
+                    singleLine = true,
+                    visualTransformation = if (regConfirmPasswordVisible) {
+                      VisualTransformation.None
+                    } else {
+                      PasswordVisualTransformation()
+                    },
+                    trailingIcon = {
+                      IconButton(
+                        onClick = { regConfirmPasswordVisible = !regConfirmPasswordVisible },
+                        modifier = Modifier.size(48.dp),
+                      ) {
+                        Icon(
+                          imageVector = if (regConfirmPasswordVisible) {
+                            Icons.Rounded.VisibilityOff
+                          } else {
+                            Icons.Rounded.Visibility
+                          },
+                          contentDescription = if (regConfirmPasswordVisible) "Hide password" else "Show password",
+                          tint = InkMuted,
+                        )
+                      }
+                    },
+                    keyboardOptions = KeyboardOptions(
+                      keyboardType = KeyboardType.Password,
+                      imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { submitRegister() }),
+                    colors = fieldColors,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .testTag("register_confirm_password_input"),
                   )
 
                   if (errorMessage != null) {
@@ -485,22 +677,10 @@ fun AuthSignInScreen(
                   Spacer(modifier = Modifier.height(20.dp))
 
                   YemeGradientButton(
-                    text = AppStrings.registerWithGoogle(lang),
+                    text = AppStrings.registerButton(lang),
                     icon = Icons.Rounded.Add,
                     isLoading = isLoading,
-                    onClick = {
-                      val cleanUser = regUsername.trim()
-                      val cleanPhone = BingoEngine.cleanPhone(regPhone)
-                      when {
-                        cleanUser.length < 2 -> {
-                          errorMessage = "Username must be at least 2 characters."
-                        }
-                        cleanPhone.isNotEmpty() && !Regex("^\\+?\\d{9,15}$").matches(cleanPhone) -> {
-                          errorMessage = "Enter a valid phone number."
-                        }
-                        else -> launchGoogleAuth(cleanUser, cleanPhone.ifEmpty { null })
-                      }
-                    },
+                    onClick = { submitRegister() },
                     modifier = Modifier.testTag("register_submit_button"),
                   )
 

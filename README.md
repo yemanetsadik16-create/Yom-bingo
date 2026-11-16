@@ -12,7 +12,7 @@ Real-time multiplayer 75-ball Stake Bingo Android application built with Kotlin,
 
 ## Tech Stack
 - **UI:** Jetpack Compose, Material 3, Navigation Compose
-- **Backend:** Firebase Authentication (Google Sign-In via Credential Manager), Cloud Firestore
+- **Backend:** Firebase Authentication (Username/Password via Email/Password provider), Cloud Firestore
 - **Testing:** JUnit, Robolectric, Firebase Local Emulator Suite (`firestore.test.js`, `BingoRepositoryRuleTest`)
 
 ## Publishing to GitHub & Generating APKs

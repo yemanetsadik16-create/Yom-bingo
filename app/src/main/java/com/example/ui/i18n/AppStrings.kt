@@ -41,26 +41,25 @@ object AppStrings {
   fun navSignOut(lang: AppLang) = if (lang == AppLang.TI) "ውጻእ" else "Sign Out"
 
   fun loginTitle(lang: AppLang) = if (lang == AppLang.TI) "እቶ" else "Login"
-  fun loginWithGoogle(lang: AppLang) = if (lang == AppLang.TI) "ብ Google እቶ" else "Login with Google"
-  fun loginSubtitle(lang: AppLang) =
-    if (lang == AppLang.TI) "ብ Google ኣካውንትኩም ብደሓን እተዉ። ዋሌትኩምን ጸወታኹምን ብቀጥታ ይስምሩ።"
-    else "Sign in securely with your Google account to sync your ETB wallet and join live multiplayer rooms."
-
   fun registerButton(lang: AppLang) = if (lang == AppLang.TI) "ተመዝገብ" else "Register"
   fun userRegistrationTitle(lang: AppLang) =
     if (lang == AppLang.TI) "ምዝገባ ተጠቃሚ" else "User Registration"
-  fun registerWithGoogle(lang: AppLang) =
-    if (lang == AppLang.TI) "ብ Google ተመዝገብ" else "Register with Google"
   fun labelUsername(lang: AppLang) = if (lang == AppLang.TI) "ስም ተጠቃሚ" else "Username"
   fun hintUsername(lang: AppLang) = if (lang == AppLang.TI) "ስም ተጠቃሚ ኣእቱ" else "Enter Username"
   fun labelPhone(lang: AppLang) = if (lang == AppLang.TI) "ቁጽሪ ስልኪ" else "Phone No"
   fun hintPhone(lang: AppLang) = if (lang == AppLang.TI) "ቁጽሪ ስልኪ ኣእቱ" else "Enter Phone Number"
+  fun labelPassword(lang: AppLang) = if (lang == AppLang.TI) "መሕለፊ ቃል" else "Password"
+  fun hintPassword(lang: AppLang) = if (lang == AppLang.TI) "መሕለፊ ቃል ኣእቱ" else "Enter Password"
+  fun labelConfirmPassword(lang: AppLang) =
+    if (lang == AppLang.TI) "መሕለፊ ቃል ኣረጋግጽ" else "Confirm Password"
+  fun hintConfirmPassword(lang: AppLang) =
+    if (lang == AppLang.TI) "መሕለፊ ቃል ደጊምካ ኣእቱ" else "Enter Password Again"
   fun haveAccountPrefix(lang: AppLang) = if (lang == AppLang.TI) "ኣካውንት ኣለካ?" else "Have an account"
 
   fun authRequiredRooms(lang: AppLang) =
-    if (lang == AppLang.TI) "ናብ ክፍሊ ንምእታው መጀመርታ ብ Google እቶ።" else "Log in with Google to join a room."
+    if (lang == AppLang.TI) "ናብ ክፍሊ ንምእታው መጀመርታ እቶ።" else "Log in to join a room."
   fun authRequiredWallet(lang: AppLang) =
-    if (lang == AppLang.TI) "ዋሌትካ ንምርኣይ መጀመርታ ብ Google እቶ።" else "Log in with Google to see your wallet."
+    if (lang == AppLang.TI) "ዋሌትካ ንምርኣይ መጀመርታ እቶ።" else "Log in to see your wallet."
 
   fun welcomePlayer(lang: AppLang, name: String) =
     if (lang == AppLang.TI) "እንቋዕ ብደሓን መጻእካ፣ $name" else "Welcome, $name"

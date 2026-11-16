@@ -57,7 +57,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.credentials.CredentialManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -68,7 +67,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.auth.authStateFlow
-import com.example.auth.signOut
+import com.example.auth.signOutUser
 import com.example.data.repository.BingoRepository
 import com.example.model.UiState
 import com.example.ui.components.ModalNoteDialog
@@ -262,7 +261,6 @@ private fun AuthenticatedYemeApp(
   val snackbarHostState = remember { SnackbarHostState() }
   val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
   val scope = rememberCoroutineScope()
-  val credentialManager = remember(context) { CredentialManager.create(context) }
 
   val walletEtb = (profileState as? UiState.Success)?.data?.wallet ?: 0L
 
@@ -364,7 +362,7 @@ private fun AuthenticatedYemeApp(
                 Spacer(modifier = Modifier.weight(1f))
                 NavigationRailItem(
                   selected = false,
-                  onClick = { signOut(credentialManager = credentialManager, scope = scope) },
+                  onClick = { signOutUser() },
                   icon = {
                     Icon(
                       Icons.AutoMirrored.Rounded.Logout,
@@ -572,7 +570,7 @@ private fun AuthenticatedYemeApp(
               selected = false,
               onClick = {
                 scope.launch { drawerState.close() }
-                signOut(credentialManager = credentialManager, scope = scope)
+                signOutUser()
               },
               icon = { Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null) },
               colors = NavigationDrawerItemDefaults.colors(

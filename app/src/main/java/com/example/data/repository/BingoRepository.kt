@@ -43,7 +43,7 @@ class BingoRepository(
 
   private fun requireUserId(): String =
     auth.currentUser?.uid
-      ?: throw IllegalStateException("User must be signed in with Google before accessing Firestore.")
+      ?: throw IllegalStateException("User must be signed in before accessing Firestore.")
 
   fun isCurrentUserAdmin(): Boolean {
     val user = auth.currentUser ?: return false

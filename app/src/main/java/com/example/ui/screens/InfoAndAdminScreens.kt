@@ -89,7 +89,7 @@ private val HOW_TO_STEPS = listOf(
   HowToStep(
     1,
     "Sign In & Top Up Wallet",
-    "Sign in with your Google account and open Wallet to send a Telebirr deposit (minimum ${BingoEngine.PAY_MIN_BIRR} ETB) to ${BingoEngine.TELEBIRR_MERCHANT_NAME} (${BingoEngine.TELEBIRR_MERCHANT_NUMBER}). Submit your Telebirr receipt link or reference ID for admin approval.",
+    "Register or log in and open Wallet to send a Telebirr deposit (minimum ${BingoEngine.PAY_MIN_BIRR} ETB) to ${BingoEngine.TELEBIRR_MERCHANT_NAME} (${BingoEngine.TELEBIRR_MERCHANT_NUMBER}). Submit your Telebirr receipt link or reference ID for admin approval.",
   ),
   HowToStep(
     2,

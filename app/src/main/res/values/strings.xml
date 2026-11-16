@@ -6,11 +6,11 @@
     <string name="countdown_rooms_open">Rooms are open · join now</string>
     <string name="countdown_round_running">Round running · next rooms open in</string>
 
-    <string name="sign_in_header">Sign In to Play</string>
+    <string name="sign_in_header">Login</string>
     <string name="sign_in_feature_live">Synchronized 75-ball live rooms</string>
     <string name="sign_in_feature_prizes">80% prize pool rewards in ETB</string>
     <string name="sign_in_feature_cloud">Real-time Firestore sync &amp; wallet</string>
-    <string name="action_sign_in_google">Sign in with Google</string>
+    <string name="action_sign_in_login">Login</string>
 
     <string name="welcome_player">Welcome, %1$s</string>
     <string name="wallet_label">Wallet Balance</string>
