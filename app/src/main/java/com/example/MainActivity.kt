@@ -168,6 +168,13 @@ fun AppNavigation() {
   val currentUser by Firebase.auth.authStateFlow()
     .collectAsStateWithLifecycle(initialValue = Firebase.auth.currentUser)
 
+  LaunchedEffect(currentUser?.uid) {
+    if (currentUser == null) {
+      pendingUsername = null
+      pendingPhone = null
+    }
+  }
+
   CompositionLocalProvider(LocalAppLang provides currentLang) {
     if (currentUser == null) {
       AuthSignInScreen(

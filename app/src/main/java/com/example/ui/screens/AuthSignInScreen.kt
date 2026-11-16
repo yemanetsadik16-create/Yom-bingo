@@ -492,10 +492,10 @@ fun AuthSignInScreen(
                       val cleanUser = regUsername.trim()
                       val cleanPhone = BingoEngine.cleanPhone(regPhone)
                       when {
-                        cleanUser.length < 3 -> {
-                          errorMessage = "Username must be at least 3 characters."
+                        cleanUser.length < 2 -> {
+                          errorMessage = "Username must be at least 2 characters."
                         }
-                        cleanPhone.isNotEmpty() && !Regex("^\\+?\\d{9,13}$").matches(cleanPhone) -> {
+                        cleanPhone.isNotEmpty() && !Regex("^\\+?\\d{9,15}$").matches(cleanPhone) -> {
                           errorMessage = "Enter a valid phone number."
                         }
                         else -> launchGoogleAuth(cleanUser, cleanPhone.ifEmpty { null })

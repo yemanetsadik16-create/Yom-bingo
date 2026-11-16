@@ -44,6 +44,13 @@ jobs:
             echo "::warning::GOOGLE_SERVICES_JSON secret is not set. Add it in GitHub Repository Secrets so the built APK includes Firebase config."
           fi
 
+      - name: Verify google-services.json before Gradle build
+        run: |
+          if [ ! -f app/google-services.json ]; then
+            echo "::error::Missing app/google-services.json. Add your app/google-services.json contents to GitHub Secret GOOGLE_SERVICES_JSON (Settings -> Secrets and variables -> Actions) and re-run so the APK connects to Firebase."
+            exit 1
+          fi
+
       - name: Restore debug keystore for CI build
         run: |
           if [ ! -f debug.keystore ]; then
@@ -59,13 +66,6 @@ jobs:
 
       - name: Run unit tests
         run: gradle :app:testDebugUnitTest --tests com.example.ExampleUnitTest
-
-      - name: Verify google-services.json before APK build
-        run: |
-          if [ ! -f app/google-services.json ]; then
-            echo "::error::Missing app/google-services.json. Add your app/google-services.json contents to GitHub Secret GOOGLE_SERVICES_JSON (Settings -> Secrets and variables -> Actions) and re-run so the APK connects to Firebase."
-            exit 1
-          fi
 
       - name: Build Debug APK
         run: gradle :app:assembleDebug
