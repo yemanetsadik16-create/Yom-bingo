@@ -1,0 +1,6 @@
+{
+  "name": "Yeme Bingo",
+  "description": "Real-time multiplayer Bingo app with timed rooms, 75-ball live caller, virtual ETB wallet, and Firebase Firestore backend.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

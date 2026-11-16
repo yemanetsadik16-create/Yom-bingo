@@ -1,0 +1,333 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        ('email_verified' in request.auth.token &&
+         request.auth.token.email_verified == true &&
+         'email' in request.auth.token &&
+         request.auth.token.email == 'desbelebisrat12@gmail.com')
+      );
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidUser(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.username is string && data.username.size() >= 2 && data.username.size() <= 40 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.email is string && data.email.size() <= 120 &&
+             data.wallet is int && data.wallet >= 0 &&
+             (!('lastWinRoundId' in data) || data.lastWinRoundId == null || (data.lastWinRoundId is string && data.lastWinRoundId.size() <= 128)) &&
+             (!('lastRefundRoundId' in data) || data.lastRefundRoundId == null || (data.lastRefundRoundId is string && data.lastRefundRoundId.size() <= 128)) &&
+             (!('lastRefundTicketId' in data) || data.lastRefundTicketId == null || (data.lastRefundTicketId is string && data.lastRefundTicketId.size() <= 128));
+    }
+
+    function isValidTransaction(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.label is string && data.label.size() >= 1 && data.label.size() <= 100 &&
+             data.amount is int &&
+             data.type in ['join', 'win', 'refund', 'topup', 'withdraw', 'admin'] &&
+             (!('roundId' in data) || data.roundId == null || (data.roundId is string && data.roundId.size() <= 128)) &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidRound(data) {
+      return data.cycle is int && data.cycle >= 0 &&
+             data.stake in [10, 20, 50, 100, 200] &&
+             data.maxTickets in [30, 60, 100, 150] &&
+             data.playerCount is int && data.playerCount >= 0 && data.playerCount <= data.maxTickets &&
+             data.status in ['waiting', 'running', 'finished', 'refunded'] &&
+             data.winnerUid is string && data.winnerUid.size() <= 128 &&
+             data.winnerName is string && data.winnerName.size() <= 40 &&
+             data.winnerTicket is int && data.winnerTicket >= 0 && data.winnerTicket <= 150 &&
+             data.winnerCalls is int && data.winnerCalls >= 0 && data.winnerCalls <= 75 &&
+             data.winnerPrize is int && data.winnerPrize >= 0;
+    }
+
+    function isValidTicket(data) {
+      return data.roundId is string && data.roundId.size() >= 1 && data.roundId.size() <= 128 &&
+             data.ticketNumber is int && data.ticketNumber >= 1 && data.ticketNumber <= 150 &&
+             data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.username is string && data.username.size() >= 1 && data.username.size() <= 40 &&
+             data.stake in [10, 20, 50, 100, 200] &&
+             data.refunded is bool;
+    }
+
+    function isValidPaymentRequest(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.username is string && data.username.size() >= 1 && data.username.size() <= 40 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.amount is int && data.amount >= 30 && data.amount <= 1000000 &&
+             data.receiptId is string && data.receiptId.size() >= 4 && data.receiptId.size() <= 30 &&
+             data.receiptLink is string && data.receiptLink.size() >= 4 && data.receiptLink.size() <= 300 &&
+             data.status in ['pending', 'approved', 'declined'];
+    }
+
+    function isValidWithdrawalRequest(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.username is string && data.username.size() >= 1 && data.username.size() <= 40 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.amount is int && data.amount >= 30 && data.amount <= 1000000 &&
+             data.telebirrAccount is string && data.telebirrAccount.size() >= 9 && data.telebirrAccount.size() <= 16 &&
+             data.status in ['pending', 'approved', 'declined'];
+    }
+
+    match /admins/{uid} {
+      allow get: if isSignedIn() && isValidId(uid) && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['userId', 'username', 'phone', 'email', 'wallet', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'username', 'phone', 'email', 'wallet', 'createdAt', 'updatedAt']) &&
+                       incoming().wallet == 0 &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidUser(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidUser(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       (
+                         (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['username', 'phone', 'wallet', 'updatedAt'])) ||
+                         (request.auth.uid == userId && (
+                           // Action: Profile update
+                           (incoming().wallet == existing().wallet &&
+                            incoming().diff(existing()).affectedKeys().hasOnly(['username', 'phone', 'updatedAt'])) ||
+                           // Action: Debit wallet for ticket join or withdrawal
+                           (incoming().wallet < existing().wallet &&
+                            incoming().wallet >= 0 &&
+                            incoming().diff(existing()).affectedKeys().hasOnly(['wallet', 'updatedAt'])) ||
+                           // Action: Atomic win payout verified against round update in same transaction
+                           (incoming().wallet > existing().wallet &&
+                            'lastWinRoundId' in incoming() &&
+                            incoming().lastWinRoundId is string &&
+                            isValidId(incoming().lastWinRoundId) &&
+                            get(/databases/$(database)/documents/rounds/$(incoming().lastWinRoundId)).data.status != 'finished' &&
+                            getAfter(/databases/$(database)/documents/rounds/$(incoming().lastWinRoundId)).data.status == 'finished' &&
+                            getAfter(/databases/$(database)/documents/rounds/$(incoming().lastWinRoundId)).data.winnerUid == request.auth.uid &&
+                            getAfter(/databases/$(database)/documents/rounds/$(incoming().lastWinRoundId)).data.winnerPrize == (incoming().wallet - existing().wallet) &&
+                            incoming().diff(existing()).affectedKeys().hasOnly(['wallet', 'lastWinRoundId', 'updatedAt'])) ||
+                           // Action: Atomic solo-room refund verified against ticket update in same transaction
+                           (incoming().wallet > existing().wallet &&
+                            'lastRefundRoundId' in incoming() &&
+                            'lastRefundTicketId' in incoming() &&
+                            incoming().lastRefundRoundId is string &&
+                            isValidId(incoming().lastRefundRoundId) &&
+                            incoming().lastRefundTicketId is string &&
+                            isValidId(incoming().lastRefundTicketId) &&
+                            get(/databases/$(database)/documents/rounds/$(incoming().lastRefundRoundId)).data.playerCount < 2 &&
+                            get(/databases/$(database)/documents/rounds/$(incoming().lastRefundRoundId)/tickets/$(incoming().lastRefundTicketId)).data.userId == request.auth.uid &&
+                            get(/databases/$(database)/documents/rounds/$(incoming().lastRefundRoundId)/tickets/$(incoming().lastRefundTicketId)).data.refunded == false &&
+                            getAfter(/databases/$(database)/documents/rounds/$(incoming().lastRefundRoundId)/tickets/$(incoming().lastRefundTicketId)).data.refunded == true &&
+                            (incoming().wallet - existing().wallet) == get(/databases/$(database)/documents/rounds/$(incoming().lastRefundRoundId)).data.stake &&
+                            incoming().diff(existing()).affectedKeys().hasOnly(['wallet', 'lastRefundRoundId', 'lastRefundTicketId', 'updatedAt']))
+                         ))
+                       );
+
+      allow delete: if isValidId(userId) && (isAdmin() || (isSignedIn() && request.auth.uid == userId));
+
+      match /transactions/{txId} {
+        allow get, list: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+        allow create: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(txId) &&
+                         (request.auth.uid == userId || isAdmin()) &&
+                         incoming().userId == userId &&
+                         incoming().keys().hasAll(['userId', 'label', 'amount', 'type', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'label', 'amount', 'type', 'roundId', 'createdAt']) &&
+                         isValidTransaction(incoming());
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
+    }
+
+    match /rounds/{roundId} {
+      allow get: if isSignedIn() && isValidId(roundId);
+      allow list: if isSignedIn() && resource.data.cycle is int;
+
+      allow create: if isSignedIn() &&
+                       isValidId(roundId) &&
+                       incoming().keys().hasAll(['cycle', 'stake', 'maxTickets', 'playerCount', 'status', 'winnerUid', 'winnerName', 'winnerTicket', 'winnerCalls', 'winnerPrize', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['cycle', 'stake', 'maxTickets', 'playerCount', 'status', 'winnerUid', 'winnerName', 'winnerTicket', 'winnerCalls', 'winnerPrize', 'createdAt', 'updatedAt']) &&
+                       incoming().playerCount == 1 &&
+                       incoming().status == 'waiting' &&
+                       incoming().winnerUid == '' &&
+                       incoming().winnerName == '' &&
+                       incoming().winnerTicket == 0 &&
+                       incoming().winnerCalls == 0 &&
+                       incoming().winnerPrize == 0 &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidRound(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(roundId) &&
+                       isValidRound(incoming()) &&
+                       incoming().cycle == existing().cycle &&
+                       incoming().stake == existing().stake &&
+                       incoming().maxTickets == existing().maxTickets &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       (
+                         isAdmin() ||
+                         // Action: Join waiting round (increment playerCount by 1)
+                         (existing().status == 'waiting' &&
+                          incoming().status == 'waiting' &&
+                          incoming().playerCount == existing().playerCount + 1 &&
+                          existing().playerCount < existing().maxTickets &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['playerCount', 'updatedAt'])) ||
+                         // Action: Declare Bingo win (terminal state lock on status == 'finished')
+                         (existing().status != 'finished' &&
+                          existing().status != 'refunded' &&
+                          existing().playerCount >= 2 &&
+                          incoming().status == 'finished' &&
+                          incoming().winnerUid == request.auth.uid &&
+                          incoming().winnerPrize == int(math.floor(existing().playerCount * existing().stake * 0.8)) &&
+                          incoming().winnerTicket >= 1 &&
+                          incoming().winnerCalls >= 1 &&
+                          incoming().winnerCalls <= 75 &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'winnerUid', 'winnerName', 'winnerTicket', 'winnerCalls', 'winnerPrize', 'updatedAt'])) ||
+                         // Action: Mark unstarted solo round as refunded
+                         (existing().status == 'waiting' &&
+                          existing().playerCount < 2 &&
+                          incoming().status == 'refunded' &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))
+                       );
+
+      allow delete: if isAdmin();
+
+      match /tickets/{ticketId} {
+        allow get: if isSignedIn() && isValidId(roundId) && isValidId(ticketId);
+        allow list: if isSignedIn() && resource.data.roundId == roundId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(roundId) &&
+                         isValidId(ticketId) &&
+                         incoming().keys().hasAll(['roundId', 'ticketNumber', 'userId', 'username', 'stake', 'refunded', 'createdAt']) &&
+                         incoming().keys().hasOnly(['roundId', 'ticketNumber', 'userId', 'username', 'stake', 'refunded', 'createdAt']) &&
+                         incoming().roundId == roundId &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().refunded == false &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTicket(incoming()) &&
+                         getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.wallet ==
+                           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.wallet - incoming().stake &&
+                         getAfter(/databases/$(database)/documents/rounds/$(roundId)).data.playerCount >= 1;
+
+        allow update: if isSignedIn() &&
+                         isValidId(roundId) &&
+                         isValidId(ticketId) &&
+                         isValidTicket(incoming()) &&
+                         incoming().roundId == existing().roundId &&
+                         incoming().ticketNumber == existing().ticketNumber &&
+                         incoming().userId == existing().userId &&
+                         incoming().stake == existing().stake &&
+                         incoming().createdAt == existing().createdAt &&
+                         (
+                           isAdmin() ||
+                           (request.auth.uid == existing().userId &&
+                            existing().refunded == false &&
+                            incoming().refunded == true &&
+                            get(/databases/$(database)/documents/rounds/$(roundId)).data.playerCount < 2 &&
+                            incoming().diff(existing()).affectedKeys().hasOnly(['refunded']))
+                         );
+
+        allow delete: if isAdmin();
+      }
+    }
+
+    match /payment_requests/{requestId} {
+      allow get: if isSignedIn() && isValidId(requestId) && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(requestId) &&
+                       incoming().keys().hasAll(['userId', 'username', 'phone', 'amount', 'receiptId', 'receiptLink', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'username', 'phone', 'amount', 'receiptId', 'receiptLink', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'pending' &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidPaymentRequest(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(requestId) &&
+                       isAdmin() &&
+                       existing().status == 'pending' &&
+                       incoming().status in ['approved', 'declined'] &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidPaymentRequest(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'amount', 'updatedAt']);
+
+      allow delete: if isAdmin();
+    }
+
+    match /withdrawal_requests/{requestId} {
+      allow get: if isSignedIn() && isValidId(requestId) && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(requestId) &&
+                       incoming().keys().hasAll(['userId', 'username', 'phone', 'amount', 'telebirrAccount', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'username', 'phone', 'amount', 'telebirrAccount', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'pending' &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidWithdrawalRequest(incoming()) &&
+                       getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.wallet ==
+                         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.wallet - incoming().amount;
+
+      allow update: if isSignedIn() &&
+                       isValidId(requestId) &&
+                       isAdmin() &&
+                       existing().status == 'pending' &&
+                       incoming().status in ['approved', 'declined'] &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidWithdrawalRequest(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+
+      allow delete: if isAdmin();
+    }
+  }
+}

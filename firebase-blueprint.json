@@ -1,0 +1,316 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated Yeme Bingo player account and ETB wallet balance.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user."
+        },
+        "username": {
+          "type": "string",
+          "description": "Player display username (2-40 characters)."
+        },
+        "phone": {
+          "type": "string",
+          "description": "Optional phone number for Telebirr verification."
+        },
+        "email": {
+          "type": "string",
+          "description": "Verified Google account email."
+        },
+        "wallet": {
+          "type": "integer",
+          "description": "Current wallet balance in ETB (>= 0)."
+        },
+        "lastWinRoundId": {
+          "type": "string",
+          "description": "Optional ID of the last round won by this user."
+        },
+        "lastRefundRoundId": {
+          "type": "string",
+          "description": "Optional ID of the last round refunded to this user."
+        },
+        "lastRefundTicketId": {
+          "type": "string",
+          "description": "Optional ticket ID refunded to this user."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of account creation (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "username", "phone", "email", "wallet", "createdAt", "updatedAt"]
+    },
+    "WalletTransaction": {
+      "title": "WalletTransaction",
+      "description": "Immutable ledger entry for a user's wallet credits and debits.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner UID."
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable description of the transaction."
+        },
+        "amount": {
+          "type": "integer",
+          "description": "Signed ETB delta (+ for credit, - for debit)."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["join", "win", "refund", "topup", "withdraw", "admin"],
+          "description": "Transaction category."
+        },
+        "roundId": {
+          "type": "string",
+          "description": "Optional associated round ID."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "label", "amount", "type", "createdAt"]
+    },
+    "BingoRound": {
+      "title": "BingoRound",
+      "description": "Multiplayer stake room round synchronized across players by cycle and stake.",
+      "type": "object",
+      "properties": {
+        "cycle": {
+          "type": "integer",
+          "description": "Synchronized 8-minute cycle index."
+        },
+        "stake": {
+          "type": "integer",
+          "enum": [10, 20, 50, 100, 200],
+          "description": "Ticket stake in ETB."
+        },
+        "maxTickets": {
+          "type": "integer",
+          "enum": [30, 60, 100, 150],
+          "description": "Maximum ticket capacity for the room."
+        },
+        "playerCount": {
+          "type": "integer",
+          "description": "Number of tickets claimed in this round."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["waiting", "running", "finished", "refunded"],
+          "description": "Round lifecycle status."
+        },
+        "winnerUid": {
+          "type": "string",
+          "description": "UID of the winning player, or empty string."
+        },
+        "winnerName": {
+          "type": "string",
+          "description": "Username of the winning player, or empty string."
+        },
+        "winnerTicket": {
+          "type": "integer",
+          "description": "Winning ticket number, or 0."
+        },
+        "winnerCalls": {
+          "type": "integer",
+          "description": "Number of calls elapsed when Bingo was claimed."
+        },
+        "winnerPrize": {
+          "type": "integer",
+          "description": "80% prize pool payout in ETB."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "cycle",
+        "stake",
+        "maxTickets",
+        "playerCount",
+        "status",
+        "winnerUid",
+        "winnerName",
+        "winnerTicket",
+        "winnerCalls",
+        "winnerPrize",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "RoundTicket": {
+      "title": "RoundTicket",
+      "description": "Claimed cartela ticket inside a Bingo round.",
+      "type": "object",
+      "properties": {
+        "roundId": {
+          "type": "string",
+          "description": "Parent BingoRound ID."
+        },
+        "ticketNumber": {
+          "type": "integer",
+          "description": "Ticket number (1..150)."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner player UID."
+        },
+        "username": {
+          "type": "string",
+          "description": "Owner player display username."
+        },
+        "stake": {
+          "type": "integer",
+          "enum": [10, 20, 50, 100, 200],
+          "description": "Stake paid in ETB."
+        },
+        "refunded": {
+          "type": "boolean",
+          "description": "Whether stake has been refunded."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["roundId", "ticketNumber", "userId", "username", "stake", "refunded", "createdAt"]
+    },
+    "PaymentRequest": {
+      "title": "PaymentRequest",
+      "description": "Telebirr deposit request awaiting admin verification.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Submitting user UID."
+        },
+        "username": {
+          "type": "string",
+          "description": "Submitting user display name."
+        },
+        "phone": {
+          "type": "string",
+          "description": "Submitting user phone number."
+        },
+        "amount": {
+          "type": "integer",
+          "description": "Deposit amount in ETB (>= 30)."
+        },
+        "receiptId": {
+          "type": "string",
+          "description": "Normalized Telebirr receipt identifier."
+        },
+        "receiptLink": {
+          "type": "string",
+          "description": "Telebirr receipt URL or reference code."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "declined"],
+          "description": "Verification status."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "username", "phone", "amount", "receiptId", "receiptLink", "status", "createdAt", "updatedAt"]
+    },
+    "WithdrawalRequest": {
+      "title": "WithdrawalRequest",
+      "description": "Telebirr withdrawal request with upfront wallet hold.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Requesting user UID."
+        },
+        "username": {
+          "type": "string",
+          "description": "Requesting user display name."
+        },
+        "phone": {
+          "type": "string",
+          "description": "Requesting user phone number."
+        },
+        "amount": {
+          "type": "integer",
+          "description": "Withdrawal amount in ETB (>= 30)."
+        },
+        "telebirrAccount": {
+          "type": "string",
+          "description": "Destination Telebirr mobile number."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "declined"],
+          "description": "Payout status."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "username", "phone", "amount", "telebirrAccount", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile and authoritative ETB wallet balance."
+    },
+    "/users/{userId}/transactions/{txId}": {
+      "schema": { "$ref": "#/entities/WalletTransaction" },
+      "description": "Per-user wallet transaction history."
+    },
+    "/rounds/{roundId}": {
+      "schema": { "$ref": "#/entities/BingoRound" },
+      "description": "Multiplayer Bingo rounds keyed by c{cycle}_{stake}."
+    },
+    "/rounds/{roundId}/tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/RoundTicket" },
+      "description": "Exclusive claimed cartelas (1..maxTickets) per Bingo round."
+    },
+    "/payment_requests/{requestId}": {
+      "schema": { "$ref": "#/entities/PaymentRequest" },
+      "description": "User Telebirr deposit requests reviewed by admin."
+    },
+    "/withdrawal_requests/{requestId}": {
+      "schema": { "$ref": "#/entities/WithdrawalRequest" },
+      "description": "User Telebirr withdrawal requests reviewed by admin."
+    }
+  }
+}

@@ -1,0 +1,76 @@
+<resources>
+    <string name="app_name">Yeme Bingo</string>
+    <string name="brand_title">YEME BINGO</string>
+    <string name="cd_menu_button">Menu</string>
+    <string name="tagline_multiplayer">Multiplayer Stake Bingo</string>
+    <string name="countdown_rooms_open">Rooms are open · join now</string>
+    <string name="countdown_round_running">Round running · next rooms open in</string>
+
+    <string name="sign_in_header">Sign In to Play</string>
+    <string name="sign_in_feature_live">Synchronized 75-ball live rooms</string>
+    <string name="sign_in_feature_prizes">80% prize pool rewards in ETB</string>
+    <string name="sign_in_feature_cloud">Real-time Firestore sync &amp; wallet</string>
+    <string name="action_sign_in_google">Sign in with Google</string>
+
+    <string name="welcome_player">Welcome, %1$s</string>
+    <string name="wallet_label">Wallet Balance</string>
+    <string name="wallet_balance_inline">Wallet: %1$d ETB</string>
+    <string name="action_quick_deposit">+ Deposit</string>
+    <string name="action_play_stake_rooms">Play in Stake Rooms</string>
+    <string name="action_edit_profile">Edit Profile</string>
+    <string name="action_save_profile">Save Profile</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_ok">OK</string>
+    <string name="action_back">Back</string>
+    <string name="action_back_to_rooms">Back to rooms</string>
+    <string name="label_username">Username</string>
+    <string name="label_phone">Phone Number</string>
+
+    <string name="nav_home">Home</string>
+    <string name="nav_rooms">Stake Rooms</string>
+    <string name="nav_wallet">Wallet</string>
+    <string name="nav_how_to_play">How to Play</string>
+    <string name="nav_faqs">FAQs</string>
+    <string name="nav_admin">Admin</string>
+    <string name="nav_sign_out">Sign Out</string>
+
+    <string name="action_join_room">JOIN ROOM</string>
+    <string name="action_deposit_money">Deposit money</string>
+
+    <string name="no_active_game">No active Bingo game for this round.</string>
+    <string name="target_goal_label">Target Goal:</string>
+    <string name="waiting_first_call">Waiting for the first call…</string>
+    <string name="action_bingo_uppercase">BINGO!</string>
+    <string name="label_auto_mark">Auto-mark</string>
+    <string name="sound_on">Sound on</string>
+    <string name="sound_off">Sound off</string>
+
+    <string name="action_deposit">Deposit</string>
+    <string name="action_withdraw">Withdraw</string>
+    <string name="deposit_title">Add Money (Telebirr)</string>
+    <string name="label_amount_birr">Amount paid (birr)</string>
+    <string name="label_telebirr_receipt">Telebirr receipt link or number</string>
+    <string name="action_submit_payment">Submit payment</string>
+    <string name="deposit_admin_note">The admin checks your payment and credits your wallet once approved.</string>
+    <string name="withdraw_title">Withdraw Money</string>
+    <string name="label_withdraw_amount">Amount to withdraw (birr)</string>
+    <string name="label_telebirr_account">Telebirr account number</string>
+    <string name="action_request_withdrawal">Request withdrawal</string>
+    <string name="withdraw_hold_note">The amount is held from your wallet now. If declined, it is returned.</string>
+    <string name="section_payment_requests">Payment requests</string>
+    <string name="section_withdrawals">Withdrawals</string>
+    <string name="section_recent_transactions">Recent transactions</string>
+    <string name="no_transactions_yet">No transactions yet.</string>
+
+    <string name="how_to_play_title">How to Play</string>
+    <string name="faqs_title">FAQs</string>
+    <string name="admin_panel_title">Admin Dashboard</string>
+    <string name="admin_access_denied">Admin access is restricted to authorized administrators.</string>
+    <string name="admin_tab_payments">Payments</string>
+    <string name="admin_tab_withdrawals">Withdrawals</string>
+    <string name="admin_tab_users">Users</string>
+    <string name="admin_search_users">Search users by name, email, or phone</string>
+    <string name="admin_no_payments">No payment requests yet.</string>
+    <string name="admin_no_withdrawals">No withdrawal requests yet.</string>
+    <string name="admin_no_users">No matching users found.</string>
+</resources>
