@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <resources>
-    <string name="firestore_database_id" translatable="false">ai-studio-android-yemebing-1d111abd-bda0-4bed-acc7-f393483a76db</string>
+    <string name="firestore_database_id" translatable="false">(default)</string>
 </resources>

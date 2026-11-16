@@ -1,7 +1,7 @@
 {
   "firestore": [
     {
-      "database": "ai-studio-android-yemebing-1d111abd-bda0-4bed-acc7-f393483a76db",
+      "database": "(default)",
       "rules": "firestore.rules"
     }
   ],

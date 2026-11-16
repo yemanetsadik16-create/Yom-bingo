@@ -2,6 +2,7 @@ package com.example.auth
 
 import android.util.Log
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
@@ -12,6 +13,7 @@ import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.auth
 import com.google.firebase.auth.userProfileChangeRequest
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -63,9 +65,15 @@ fun signInWithUsernameAndPassword(
     try {
       Firebase.auth.signInWithEmailAndPassword(email, password).await()
       onAuthSuccess()
+    } catch (ce: CancellationException) {
+      throw ce
     } catch (e: Exception) {
-      Log.w(TAG, "Login failed for $email", e)
-      onAuthError(mapFirebaseAuthError(e, isRegistration = false))
+      if (Firebase.auth.currentUser != null) {
+        onAuthSuccess()
+      } else {
+        Log.w(TAG, "Login failed for $email", e)
+        onAuthError(mapFirebaseAuthError(e, isRegistration = false))
+      }
     }
   }
 }
@@ -82,17 +90,28 @@ fun registerWithUsernameAndPassword(
   scope.launch {
     try {
       val result = Firebase.auth.createUserWithEmailAndPassword(internalEmail, password).await()
-      runCatching {
+      try {
         result.user?.updateProfile(
           userProfileChangeRequest {
             displayName = cleanUsername
           }
         )?.await()
+      } catch (ce: CancellationException) {
+        throw ce
+      } catch (profileErr: Exception) {
+        // Account creation already succeeded; preserve success state
+        Log.w(TAG, "Optional displayName update failed after sign-up", profileErr)
       }
       onAuthSuccess()
+    } catch (ce: CancellationException) {
+      throw ce
     } catch (e: Exception) {
-      Log.w(TAG, "Registration failed for $internalEmail", e)
-      onAuthError(mapFirebaseAuthError(e, isRegistration = true))
+      if (Firebase.auth.currentUser != null) {
+        onAuthSuccess()
+      } else {
+        Log.w(TAG, "Registration failed for $internalEmail", e)
+        onAuthError(mapFirebaseAuthError(e, isRegistration = true))
+      }
     }
   }
 }
@@ -111,8 +130,10 @@ private fun mapFirebaseAuthError(e: Exception, isRegistration: Boolean): String 
     e is FirebaseAuthInvalidUserException || e is FirebaseAuthInvalidCredentialsException ||
       code in setOf("ERROR_INVALID_CREDENTIAL", "ERROR_WRONG_PASSWORD", "ERROR_USER_NOT_FOUND") ->
       "Wrong username or password."
-    code == "ERROR_OPERATION_NOT_ALLOWED" ->
-      "Email/Password authentication is not enabled on Firebase Console."
+    code == "ERROR_OPERATION_NOT_ALLOWED" -> {
+      val projectId = runCatching { FirebaseApp.getInstance().options.projectId }.getOrNull() ?: "unknown"
+      "Email/Password authentication is not enabled in Firebase Console for project '$projectId'."
+    }
     e is FirebaseNetworkException ->
       "Network error. Check your internet connection and try again."
     else -> e.localizedMessage ?: if (isRegistration) "Registration failed." else "Login failed."
