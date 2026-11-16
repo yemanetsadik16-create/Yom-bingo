@@ -98,6 +98,7 @@ import com.example.ui.theme.VioletLine
 import com.example.ui.theme.YemeBingoTheme
 import com.example.viewmodel.YemeBingoViewModel
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.launch
@@ -136,6 +137,29 @@ fun AppNavigation() {
     val next = if (currentLang == AppLang.EN) AppLang.TI else AppLang.EN
     currentLang = next
     prefs.edit().putString("lang", next.code).apply()
+  }
+
+  val isFirebaseReady = remember(context) {
+    FirebaseApp.getApps(context).isNotEmpty() ||
+      runCatching { FirebaseApp.initializeApp(context) }.getOrNull() != null
+  }
+
+  if (!isFirebaseReady) {
+    RoyalBackground(modifier = Modifier.fillMaxSize()) {
+      Box(
+        modifier = Modifier
+          .fillMaxSize()
+          .padding(24.dp),
+        contentAlignment = Alignment.Center,
+      ) {
+        Text(
+          text = "Firebase configuration missing. Add google-services.json (or GOOGLE_SERVICES_JSON in GitHub Secrets) and rebuild the APK.",
+          color = GoldBright,
+          fontWeight = FontWeight.SemiBold,
+        )
+      }
+    }
+    return
   }
 
   var pendingUsername by remember { mutableStateOf<String?>(null) }
